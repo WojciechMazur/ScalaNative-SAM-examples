@@ -1,0 +1,6 @@
+#!/bin/sh
+
+export LD_LIBRARY_PATH="/opt/sn-runtime/lib:${LD_LIBRARY_PATH}"
+export S2N_DONT_MLOCK=1
+
+$LAMBDA_TASK_ROOT/lambdaHandler

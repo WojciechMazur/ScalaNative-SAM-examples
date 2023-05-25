@@ -1,0 +1,120 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  lambda-sandbox
+Transform:
+  - AWS::Serverless-2016-10-31
+
+Globals:
+  Function:
+      Architectures: [x86_64]
+      MemorySize: 128
+      Timeout: 10
+
+Resources:
+  ### Layers ###
+  ScalaNativeRuntime:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: scala-native-runtime
+      Description: Dependencies and bootstrap file for Scala Native based handlers
+      ContentUri: ./layers/runtime
+      CompatibleRuntimes:
+        - provided
+      CompatibleArchitectures:
+        - x86_64
+    Metadata:
+      BuildMethod: makefile
+      ProjectRootDirectory: .
+
+  ### Hello world ###
+  HelloWorld:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./handlers/hello
+      Runtime: provided
+      Handler: bootstrap
+      Layers: [ !Ref ScalaNativeRuntime ]
+    Metadata:
+      ProjectRootDirectory: .
+    
+  HelloWorldJVM:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./handlers/hello
+      Runtime: java11
+      Handler: hello.HelloWorldHandler
+    Metadata:
+      BuildMethod: makefile
+      ProjectRootDirectory: .
+
+  ### Tapir HTTP ###
+
+  TapirExample:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./handlers/http
+      Runtime: provided
+      Handler: bootstrap
+      Layers: [ !Ref ScalaNativeRuntime ]
+      Events:
+        SayHello:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref SayHelloApi
+            Path: /api/hello/{name}
+            Method: GET
+            PayloadFormatVersion: '2.0'
+    Metadata:
+      ProjectRootDirectory: .
+
+  TapirExampleJVM:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./handlers/http
+      Runtime: java11
+      Handler: TapirExampleHandler
+      MemorySize: 512
+      Events:
+        SayHello:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref SayHelloApi
+            Path: /api/hello/{name}
+            Method: GET
+            PayloadFormatVersion: '2.0'
+    Metadata:
+      BuildMethod: makefile
+      ProjectRootDirectory: .
+
+
+
+  ### Smithy4s generated SDK ###
+  RequestUnicorn:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./handlers/wildrides
+      Runtime: provided
+      Handler: bootstrap
+      Layers: [ !Ref ScalaNativeRuntime ]
+      Events:
+        SayHello:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref SayHelloApi
+            Path: /ride/
+            Method: POST
+            PayloadFormatVersion: '2.0'
+    Metadata:
+      ProjectRootDirectory: .
+
+  SayHelloApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: $default
+
+Outputs:
+  SayHelloUrl:
+    Description: Base URL of your endpoints
+    Value:
+      Fn::Sub: https://${SayHelloApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}
+  
