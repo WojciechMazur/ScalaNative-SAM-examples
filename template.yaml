@@ -74,14 +74,6 @@ Resources:
       Runtime: java11
       Handler: TapirExampleHandler
       MemorySize: 512
-      Events:
-        SayHello:
-          Type: HttpApi
-          Properties:
-            ApiId: !Ref SayHelloApi
-            Path: /api/hello/{name}
-            Method: GET
-            PayloadFormatVersion: '2.0'
     Metadata:
       BuildMethod: makefile
       ProjectRootDirectory: .
@@ -100,7 +92,7 @@ Resources:
         SayHello:
           Type: HttpApi
           Properties:
-            ApiId: !Ref SayHelloApi
+            ApiId: !Ref RequestUnicornsApi
             Path: /ride/
             Method: POST
             PayloadFormatVersion: '2.0'
@@ -108,6 +100,11 @@ Resources:
       ProjectRootDirectory: .
 
   SayHelloApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: $default
+
+  RequestUnicornsApi:
     Type: AWS::Serverless::HttpApi
     Properties:
       StageName: $default
