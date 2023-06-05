@@ -87,14 +87,12 @@ case class APIGatewayProxyResponseEvent(
     override def run(
         event: APIGatewayProxyRequestEvent
     )(using Context): APIGatewayProxyResponseEvent = {
-      println(event)
       val authorizer = event.requestContext.authorizer
       if authorizer == null
       then
         return Response
           .Failure("Authorization not configured", context.getAwsRequestId())
           .asEvent
-
       val rideId =
         scala.util.Random.alphanumeric
           .take(16)
@@ -138,15 +136,6 @@ val dynamoDbClient = for {
   dynamodb <- DynamoDB.simpleAwsClient(httpClient, AwsRegion.EU_CENTRAL_1)
 } yield dynamodb
 
-implicit class NativeIOOps[T](val io: IO[T]) extends AnyVal {
-  def runSync()(implicit runtime: IORuntime): T = {
-    val promise = scala.concurrent.Promise[T]
-    io.unsafeRunAsync(v => promise.complete(v.toTry))
-    while(!promise.isCompleted) scala.scalanative.runtime.loop()
-    promise.future.value.get.get
-  }
-}
-
 def recordRide(rideId: String, username: String, unicorn: Unicorn): Try[Unit] = Try:
   dynamoDbClient
     .use { dynamoDb =>
@@ -164,3 +153,12 @@ def recordRide(rideId: String, username: String, unicorn: Unicorn): Try[Unit] = 
         ).flatMap(res => IO.println(s"Recorded ride with id=$rideId, res=$res"))
     }
     .runSync()
+
+implicit class NativeIOOps[T](val io: IO[T]) extends AnyVal {
+  def runSync()(implicit runtime: IORuntime): T = {
+    val promise = scala.concurrent.Promise[T]
+    io.unsafeRunAsync(v => promise.complete(v.toTry))
+    while(!promise.isCompleted) scala.scalanative.runtime.loop()
+    promise.future.value.get.get
+  }
+}
